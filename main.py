@@ -7,21 +7,48 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def dominant_grid(segments, winsize=16):
+def dominant_pool_2d(spatial: np.ndarray, winsize=16):
   """
-  Write documents
+  Return a 2-D array with a pooling operation.
+  The pooling operation is to select the most dominant value for each window.
+  This assumes that the input 'spatial' has discrete values like index or lablel.
+  To circumvent an use of iterative loop, we use a trick with one-hot encoding
+  and 'skimage.measure.block_reduce' function.
+
+  Parameters
+  ----------
+  spatial : int ndarray of shape (Width, Hight)
+    The spatial is represented by int label, not one-hot encoding
+  winsize : int, optional
+    Length of sweeping window
+
+  Returns
+  -------
+  pool : ndarray of shape (N,M)
+    The pooling results
+
+  Examples
+  --------
+  >>> np.eye(2, dtype=int)
+  array([[1, 0],
+         [0, 1]])
+  >>> np.eye(3, k=1)
+  array([[0.,  1.,  0.],
+         [0.,  0.,  1.],
+         [0.,  0.,  0.]])
+
   """
-  num_seg = segments.max() + 1
-  one_hot = np.eye(num_seg)[segments]
+  num_seg = spatial.max() + 1
+  one_hot = np.eye(num_seg)[spatial]
   sum_pooling = skimage.measure.block_reduce(one_hot, (winsize, winsize, 1),
                                              func=np.sum)
-  idx_grid = np.argmax(sum_pooling, axis=-1)
-  return idx_grid
+  pool = np.argmax(sum_pooling, axis=-1)
+  return pool
 
 
-def gen_sp2rgbmean(image, segments):
+def gen_sp2rgbmean(image: np.ndarray, segments: np.ndarray):
   """
-  Generate a mapping from superpixel index to corresponding RGB mean value
+  Generate a mapping from superpixel index to the corresponding RGB mean value
   """
 
   # Define required values
@@ -84,7 +111,7 @@ def main():
 
   num_seg = 100
   image_meansp, segments, sp2rgb = gen_mean_superpixel(image, num_seg=num_seg)
-  grid = dominant_grid(segments, num_seg=num_seg)
+  grid = dominant_pool_2d(segments, num_seg=num_seg)
   dominant_color = sp2rgb[grid]
 
   fig = plt.figure("Superpixels -- %d segments" % (num_seg))
@@ -112,7 +139,7 @@ def main2():
   # What we exactly needs ====================================================
   segments = slic(image, n_segments=num_seg, sigma=sigma)
   sp2rgbmean = gen_sp2rgbmean(image, segments)  # The most important data
-  idx_grid = dominant_grid(segments, winsize=winsize)
+  idx_grid = dominant_pool_2d(segments, winsize=winsize)
   dominant_color = sp2rgbmean[idx_grid]
   # print(dominant_color.shape)  # (w/16, h/16, 3)
   # ==========================================================================
