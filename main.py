@@ -1,4 +1,5 @@
 from skimage.segmentation import slic
+from os.path import join
 from skimage.util import img_as_float
 from skimage import io
 import skimage.measure
@@ -6,14 +7,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
+
 def parse():
   p = argparse.ArgumentParser()
   p.add_argument("--winsize", type=int, default=16)
-  p.add_argument("--path_input", type=str, default="sample01_resize_256_256.jpg")
+  p.add_argument("--path_input",
+                 type=str,
+                 default="sample01.jpg")
+  p.add_argument("--save", action='store_true')
   p.add_argument("--sigma", type=float, default=5.0)
   p.add_argument("--num_seg", type=int, default=100)
   return p.parse_args()
-
 
 
 def dominant_pool_2d(spatial: np.ndarray, winsize=16):
@@ -101,14 +105,16 @@ def main1():
   # print(dominant_color.shape)  # (w/16, h/16, 3)
   # ==========================================================================
 
-  fig = plt.figure("hello")
-  ax = fig.add_subplot(1, 1, 1)
-  ax.set_title("dominant_color")
-  ax.imshow(dominant_color)
-  plt.axis("off")
-
-  plt.tight_layout()
-  plt.show()
+  if args.save:
+    io.imsave(join('outputs', args.path_input), dominant_color)
+  else:
+    fig = plt.figure("hello")
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_title("dominant_color")
+    ax.imshow(dominant_color)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
 
 
 def main2():
@@ -116,7 +122,7 @@ def main2():
   Estimate dominant colors for each spatial region.
   """
   args = parse()
-  image = img_as_float(io.imread(args.path_output))
+  image = img_as_float(io.imread(args.path_input))
   num_seg = args.num_seg
   sigma = args.sigma
 
@@ -127,16 +133,18 @@ def main2():
   # print(dominant_color.shape)  # (w/16, h/16, 3)
   # ==========================================================================
 
-  fig = plt.figure("hello")
-  ax = fig.add_subplot(1, 1, 1)
-  ax.set_title("superpixel")
-  ax.imshow(superpixel)
-  plt.axis("off")
-
-  plt.tight_layout()
-  plt.show()
+  if args.save:
+    io.imsave(join('outputs', args.path_input), superpixel)
+  else:
+    fig = plt.figure("hello")
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_title("dominant_color")
+    ax.imshow(superpixel)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
-  main1()
+  # main1()
   main2()
