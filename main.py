@@ -6,14 +6,15 @@ import skimage.measure
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
+import random
+import torch
+import torch.nn as nn
 
 
 def parse():
   p = argparse.ArgumentParser()
   p.add_argument("--winsize", type=int, default=16)
-  p.add_argument("--path_input",
-                 type=str,
-                 default="sample01.jpg")
+  p.add_argument("--path_input", type=str, default="sample01.jpg")
   p.add_argument("--save", action='store_true')
   p.add_argument("--sigma", type=float, default=5.0)
   p.add_argument("--num_seg", type=int, default=100)
@@ -89,7 +90,7 @@ def gen_sp2rgbmean(image: np.ndarray, segments: np.ndarray):
 
 def main1():
   """
-  Estimate superpixels with mean color.
+  Estimate dominant colors for each spatial region.
   """
   args = parse()
   image = img_as_float(io.imread(args.path_input))
@@ -119,7 +120,7 @@ def main1():
 
 def main2():
   """
-  Estimate dominant colors for each spatial region.
+  Estimate superpixels with mean color.
   """
   args = parse()
   image = img_as_float(io.imread(args.path_input))
@@ -145,6 +146,124 @@ def main2():
     plt.show()
 
 
+def gen_mask_hint_label(
+    dim_spatial=(16, 16),
+    prop_mask_all=0.03,
+    num_mask_from=16,
+    num_mask_to=256,
+    prop_hint=0.7,
+    num_hint_from=1,
+    num_hint_to=16,
+):
+  """
+  The function sample masked and hint regions.
+  Note that the hint points are sampled among masked regions.
+
+  Parameters
+  ----------
+  dim_spatial : an tuple of shape (W, H)
+  prop_mask_all : float for probability
+  num_mask_from : int number for minimum value of the number of sampling mask
+  num_mask_to : int number for upper bound of the number of sampling mask
+  prop_hint : float for probability
+  num_hint_from : int number for minimum value of the number of sampling hint
+  num_hint_to : int number for minimum value of the number of sampling hint
+
+  Returns
+  -------
+  mask : ndarray of shape (W, H)
+    the mask has three types of value
+     0 --> masked points
+     1 --> unmasked points, i.e. preserve original values
+    -1 --> the points using color hint
+  """
+
+  dim_spatial_flat = dim_spatial[0] * dim_spatial[1]
+
+  # MASK SYNTHESIS
+  mask = np.ones(dim_spatial_flat).astype('int')
+  is_all_mask = np.random.binomial(1, p=prop_mask_all, size=1)[0]
+  if is_all_mask:
+    idx_mask = random.sample(range(0, dim_spatial_flat), dim_spatial_flat)
+  else:
+    num_mask = np.random.randint(num_mask_from, num_mask_to + 1)
+    idx_mask = random.sample(range(0, dim_spatial_flat), num_mask)
+
+  mask[idx_mask] = 0
+
+  # HINT SELECTION
+  is_hint = np.random.binomial(1, p=prop_hint, size=1)[0]
+  if is_hint:
+    num_hint = np.random.randint(num_hint_from, num_hint_to + 1)
+    idx_hint = random.sample(idx_mask, num_hint)
+    mask[idx_hint] = -1
+
+  mask = mask.reshape(*dim_spatial)
+
+  return mask
+
+
+def main3():
+  """
+  Mask and hint sampling example
+  - RGB image 
+  - gray scale 
+  """
+  dim_embd = 1
+  z_feat = torch.randn(3, dim_embd, 16, 16)
+  mask = gen_mask_hint_label()
+
+  # print(z_feat)
+  # print(z_feat.shape)
+
+  print(mask)
+  print(mask <=0)
+  z_feat[mask <= 0] = 0
+  print(z_feat)
+
+  exit()
+  token_mask = torch.randn(dim_embd)
+
+  # print(mask  0)
+  exit()
+
+  args = parse()
+  image = img_as_float(io.imread(args.path_input))
+  num_seg = args.num_seg
+  sigma = args.sigma
+  winsize = args.winsize
+
+  # What we exactly needs ====================================================
+  segments = slic(image, n_segments=num_seg, sigma=sigma)
+  sp2rgbmean = gen_sp2rgbmean(image, segments)  # The most important data
+  idx_grid = dominant_pool_2d(segments, winsize=winsize)
+  dominant_color = sp2rgbmean[idx_grid]
+  # print(dominant_color.shape)  # (w/16, h/16, 3)
+  # ==========================================================================
+
+  if args.save:
+    io.imsave(join('outputs', args.path_input), dominant_color)
+  else:
+    fig = plt.figure("hello")
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_title("dominant_color")
+    ax.imshow(dominant_color)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
+
+
+def tmp_embeding():
+  embd = nn.Embedding(num_embeddings=2, embedding_dim=3)
+  x = torch.IntTensor([0, 1])
+  y = embd(x)
+  print(embd.weight)
+  print(y)
+  pass
+
+
 if __name__ == "__main__":
   # main1()
-  main2()
+  # main2()
+  # tmp_embeding()
+  main3()
