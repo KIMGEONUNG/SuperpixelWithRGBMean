@@ -1,5 +1,7 @@
-from skimage.segmentation import slic
+#!/usr/bin/env python
+
 from os.path import join
+from skimage.segmentation import slic
 from skimage.util import img_as_float
 from skimage import io
 import skimage.measure
@@ -94,6 +96,7 @@ def main1():
   """
   args = parse()
   image = img_as_float(io.imread(args.path_input))
+  image = image * 2 - 1 # tmp
   num_seg = args.num_seg
   sigma = args.sigma
   winsize = args.winsize
@@ -105,6 +108,9 @@ def main1():
   dominant_color = sp2rgbmean[idx_grid]
   # print(dominant_color.shape)  # (w/16, h/16, 3)
   # ==========================================================================
+
+  dominant_color = (dominant_color + 1) * 0.5
+
 
   if args.save:
     io.imsave(join('outputs', args.path_input), dominant_color)
@@ -263,7 +269,4 @@ def tmp_embeding():
 
 
 if __name__ == "__main__":
-  # main1()
-  # main2()
-  # tmp_embeding()
-  main3()
+  main2()

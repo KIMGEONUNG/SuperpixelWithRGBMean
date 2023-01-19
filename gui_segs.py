@@ -9,7 +9,7 @@ import gradio as gr
 from glob import glob
 
 
-class GUI():
+class GUISegs():
 
     def __init__(self):
         with gr.Blocks() as self.demo:
@@ -120,5 +120,5 @@ class GUI():
 
 
 if __name__ == "__main__":
-    gui = GUI()
+    gui = GUISegs()
     gui.launch()
